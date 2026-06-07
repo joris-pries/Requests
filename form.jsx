@@ -193,6 +193,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
   const [recurrenceCustom, setRecurrenceCustom] = React.useState(
     existing?.recurrence?.text ?? initial?.recurrence?.text ?? ''
   );
+  const [tags, setTags] = React.useState(existing?.tags || initial?.tags || []);
   const recurringSeriesId = existing?.recurringSeriesId ?? initial?._recurringSeriesId ?? null;
   const initDir = existing?.direction || initial?.direction || 'sent';
   const [status, setStatus] = React.useState(
@@ -225,7 +226,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         _groupId: counter[0],
         title: title.trim(), desc: desc.trim(),
         direction, status, priority, due: due || null,
-        recurrence, recurringSeriesId,
+        recurrence, recurringSeriesId, tags,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -237,7 +238,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         _memberIds: counter,
         title: title.trim(), desc: desc.trim(),
         direction, status, priority, due: due || null,
-        recurrence, recurringSeriesId,
+        recurrence, recurringSeriesId, tags,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -253,7 +254,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         ...existing,
         title: title.trim(), desc: desc.trim(),
         direction, from, to, status, priority, due: due || null,
-        recurrence,
+        recurrence, tags,
         activity: [...existing.activity, { who: 'me', when: 'just now', text: 'Edited this request' }],
       });
     } else {
@@ -261,7 +262,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         id: 'REQ-' + (105 + Math.floor(Math.random() * 900)),
         title: title.trim(), desc: desc.trim(),
         direction, from, to, status, priority, due: due || null,
-        recurrence, recurringSeriesId,
+        recurrence, recurringSeriesId, tags,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -363,6 +364,11 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
                        onChange={(e) => setRecurrenceCustom(e.target.value)} />
               </div>
             )}
+          </div>
+
+          <div className="field">
+            <label>Tags</label>
+            <TagInput value={tags} onChange={setTags} />
           </div>
         </div>
 
@@ -472,4 +478,33 @@ function BulkBar({ count, onClear, onMove, onDelete, onMarkDone, onAssign }) {
   );
 }
 
-Object.assign(window, { NewRequestModal, BulkBar, PersonPicker });
+function TagInput({ value, onChange }) {
+  const [input, setInput] = React.useState('');
+  const confirm = (raw) => {
+    const tag = raw.trim().toLowerCase().replace(/,/g, '');
+    if (!tag || value.includes(tag)) { setInput(''); return; }
+    onChange([...value, tag]);
+    setInput('');
+  };
+  return (
+    <div className="tag-input-wrap" onClick={(e) => e.currentTarget.querySelector('input')?.focus()}>
+      {value.map(t => (
+        <span key={t} className="tag-chip">
+          {t}
+          <button type="button" onClick={() => onChange(value.filter(x => x !== t))}>×</button>
+        </span>
+      ))}
+      <input className="tag-input"
+             value={input}
+             placeholder={value.length ? '' : 'Add tags…'}
+             onChange={(e) => setInput(e.target.value)}
+             onKeyDown={(e) => {
+               if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); confirm(input); }
+               if (e.key === 'Backspace' && !input && value.length) onChange(value.slice(0, -1));
+             }}
+             onBlur={() => { if (input.trim()) confirm(input); }} />
+    </div>
+  );
+}
+
+Object.assign(window, { NewRequestModal, BulkBar, PersonPicker, TagInput });

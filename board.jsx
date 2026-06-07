@@ -52,6 +52,12 @@ function Card({ req, selected, onOpen, onToggleSelect, isChecked, onHover }) {
 
       {req.desc && <p className="desc">{req.desc}</p>}
 
+      {(req.tags || []).length > 0 && (
+        <div className="card-tags">
+          {req.tags.map(t => <span key={t} className="card-tag">{t}</span>)}
+        </div>
+      )}
+
       <div className="card-foot">
         <div className="duo">
           <Avatar person={from} />

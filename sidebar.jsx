@@ -96,7 +96,7 @@ function EntityRow({ entity, isActive, count, allPeople, onSelect, onDelete }) {
   );
 }
 
-function Sidebar({ requests, allPeople, groups, view, setView, peopleFilter, setPeopleFilter, onOpenAdd, onDeletePerson, onDeleteGroup, fileName }) {
+function Sidebar({ requests, allPeople, groups, view, setView, peopleFilter, setPeopleFilter, tagFilter, setTagFilter, onOpenAdd, onDeletePerson, onDeleteGroup, fileName }) {
   const nonMe = allPeople.filter(p => !p.isMe);
 
   const counts = React.useMemo(() => {
@@ -136,7 +136,16 @@ function Sidebar({ requests, allPeople, groups, view, setView, peopleFilter, set
     return map;
   }, [requests, groups]);
 
-  const goHome = () => { setView('all'); setPeopleFilter(null); };
+  const tagCounts = React.useMemo(() => {
+    const map = {};
+    requests.forEach(r => {
+      if (r.deleted || r.status === 'done') return;
+      (r.tags || []).forEach(t => { map[t] = (map[t] || 0) + 1; });
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [requests]);
+
+  const goHome = () => { setView('all'); setPeopleFilter(null); setTagFilter(null); };
 
   const navItem = (id, icon, label, count) => (
     <button key={id}
@@ -227,6 +236,21 @@ function Sidebar({ requests, allPeople, groups, view, setView, peopleFilter, set
           );
         })}
       </div>
+
+      {tagCounts.length > 0 && (
+        <div className="nav-group">
+          <div className="nav-label">Tags</div>
+          {tagCounts.map(([tag, count]) => (
+            <button key={tag}
+                    className={'tag-nav-item' + (tagFilter === tag ? ' active' : '')}
+                    onClick={() => setTagFilter(tagFilter === tag ? null : tag)}>
+              <span className="tag-hash">#</span>
+              <span style={{ flex: 1, textAlign: 'left' }}>{tag}</span>
+              <span className="count mono">{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 11, color: 'var(--ink-3)', padding: '4px 6px 2px', fontFamily: 'Geist Mono, monospace' }}>

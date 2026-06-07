@@ -189,6 +189,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
 }
 .person-row { overflow: visible; }
 .person-row:hover { background: var(--hover); color: var(--ink); }
+.person-row.active { background: var(--hover); color: var(--ink); }
 .person-row.group-row { border-left: 2px solid var(--line-2); padding-left: 6px; }
 .person-row.active.group-row { border-left-color: var(--ink-3); }
 .row-delete-btn {
@@ -1107,3 +1108,50 @@ input, textarea, select { font-family: inherit; color: inherit; }
 ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 5px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Tags */
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.card-tag {
+  font-family: 'Geist Mono', monospace; font-size: 10px;
+  color: var(--ink-3); background: var(--hover);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 5px; line-height: 1.5;
+}
+.tag-input-wrap {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  padding: 6px 8px; min-height: 36px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); cursor: text;
+  transition: border-color .12s, box-shadow .12s;
+}
+.tag-input-wrap:focus-within {
+  border-color: var(--line-2);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font-size: 11.5px; font-family: 'Geist Mono', monospace;
+}
+.tag-chip button { color: var(--accent-ink); font-size: 13px; line-height: 1; opacity: .7; }
+.tag-chip button:hover { opacity: 1; }
+.tag-input {
+  border: 0; outline: 0; background: transparent;
+  font-size: 12.5px; min-width: 80px; flex: 1;
+}
+
+/* Sidebar tag nav */
+.tag-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 5px 8px; border-radius: 6px;
+  font-size: 13px; color: var(--ink-2);
+  transition: background .1s;
+}
+.tag-nav-item:hover { background: var(--hover); color: var(--ink); }
+.tag-nav-item.active { background: var(--hover); color: var(--ink); font-weight: 500; }
+.tag-nav-item .tag-hash {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  color: var(--ink-3); flex-shrink: 0; width: 14px; text-align: center;
+}
+.tag-nav-item .count { margin-left: auto; }

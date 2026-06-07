@@ -65,6 +65,7 @@ function App() {
 
   const [view, setView] = React.useState('all');
   const [peopleFilter, setPeopleFilter] = React.useState(null);
+  const [tagFilter, setTagFilter] = React.useState(null);
   const [query, setQuery] = React.useState('');
   const [openId, setOpenId] = React.useState(null);
   const [editId, setEditId] = React.useState(null);
@@ -84,6 +85,7 @@ function App() {
   const [showFileModal, setShowFileModal] = React.useState(false);
   const [pendingHandle, setPendingHandle] = React.useState(null);
   const [showPeoplePicker, setShowPeoplePicker] = React.useState(false);
+  const [showTagPicker, setShowTagPicker] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
 
   React.useEffect(() => { applyTheme(t); }, [t.accent, t.dark, t.density]);
@@ -193,6 +195,7 @@ function App() {
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setNewModal({}); }
       if (e.key === 'm' || e.key === 'M') { e.preventDefault(); setNewModal(peopleFilter ? { _prefillPerson: peopleFilter } : {}); }
       if (e.key === 'p' || e.key === 'P') { e.preventDefault(); setShowPeoplePicker(true); }
+      if (e.key === 't' || e.key === 'T') { e.preventDefault(); setShowTagPicker(true); }
       if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); setView('quick'); }
       if (e.key === '/') { e.preventDefault(); document.querySelector('.search input')?.focus(); }
       if (e.key === 'Escape') { setSelected(new Set()); }
@@ -293,6 +296,7 @@ function App() {
         const hay = (r.title + ' ' + r.desc + ' ' + r.id + ' ' + personById(r.from).name + ' ' + personById(r.to).name).toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (tagFilter && !(r.tags || []).includes(tagFilter)) return false;
       return true;
     });
     const PRI = { high: 0, med: 1, low: 2 };
@@ -308,7 +312,7 @@ function App() {
       return 0;
     });
     return arr;
-  }, [requests, view, peopleFilter, query, sort, groups]);
+  }, [requests, view, peopleFilter, tagFilter, query, sort, groups]);
 
   const openReq = requests.find(r => r.id === openId);
   const editReq = requests.find(r => r.id === editId);
@@ -465,6 +469,7 @@ function App() {
                allPeople={people} groups={groups}
                view={view} setView={(v) => { setView(v); setSelected(new Set()); }}
                peopleFilter={peopleFilter} setPeopleFilter={setPeopleFilter}
+               tagFilter={tagFilter} setTagFilter={setTagFilter}
                onOpenAdd={() => setAddModalOpen(true)}
                onDeletePerson={deletePerson}
                onDeleteGroup={deleteGroup}
@@ -514,6 +519,14 @@ function App() {
                     onClick={() => setNewModal({ _prefillPerson: peopleFilter })}>
               <IconPlus size={12} /> New request
               <span className="kbd" style={{ marginLeft: 2 }}>M</span>
+            </button>
+          )}
+
+          {tagFilter && (
+            <button className="btn ghost"
+                    style={{ padding: '3px 10px', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8, fontFamily: 'Geist Mono, monospace' }}
+                    onClick={() => setTagFilter(null)}>
+              #{tagFilter} ×
             </button>
           )}
 
@@ -648,6 +661,14 @@ function App() {
       )}
 
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+
+      {showTagPicker && (
+        <TagPicker
+          requests={requests}
+          onSelect={(tag) => setTagFilter(tag)}
+          onClose={() => setShowTagPicker(false)}
+        />
+      )}
 
       {showPeoplePicker && (
         <PeoplePicker

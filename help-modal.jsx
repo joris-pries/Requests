@@ -4,6 +4,7 @@ const SHORTCUTS = [
   { keys: ['N'],     desc: 'New request' },
   { keys: ['M'],     desc: 'New request for current person / group' },
   { keys: ['P'],     desc: 'Jump to person or group' },
+  { keys: ['T'],     desc: 'Jump to tag' },
   { keys: ['Q'],     desc: 'Quick add' },
   { keys: ['/'],     desc: 'Focus search' },
   { keys: ['Space'], desc: 'Toggle status of hovered request' },

@@ -164,6 +164,11 @@ function Drawer({ req, onClose, onEdit, onUpdate, onStatusChange }) {
                        }} />
               )}
             </div>
+            <div className="k">Tags</div>
+            <div className="v" style={{ display: 'block' }}>
+              <TagInput value={req.tags || []}
+                        onChange={(tags) => onUpdate(req.id, r => ({ ...r, tags }))} />
+            </div>
           </div>
 
           <div className="nav-label" style={{ padding: 0, marginBottom: 8 }}>Description</div>

@@ -88,23 +88,25 @@ function App() {
 
   React.useEffect(() => { applyTheme(t); }, [t.accent, t.dark, t.density]);
 
-  // On mount: try to restore stored handle. If permission needs a gesture, show modal.
+  // On mount: try to restore stored handle.
+  // If permission is already granted or can be auto-requested, load silently.
+  // Only show the modal if a user gesture is truly required (first time, or request failed).
   React.useEffect(() => {
     const S = window.LoopStorage;
     if (!S?.supported) return;
     S.getStoredHandle().then(async (handle) => {
       if (handle) {
-        // Check without requesting (requires user gesture)
-        const perm = await handle.queryPermission({ mode: 'readwrite' });
-        if (perm === 'granted') {
-          try {
+        // Try to request permission immediately — modern Chrome allows this without gesture
+        // if the file was used recently.
+        try {
+          const perm = await handle.requestPermission({ mode: 'readwrite' });
+          if (perm === 'granted') {
             await applyFileData(handle);
             return;
-          } catch (e) {
-            console.warn('Loop: could not read data file', e);
           }
+        } catch (e) {
+          // requestPermission may throw if user gesture is required; fall through to modal
         }
-        // Permission needs to be re-granted — show modal with stored handle
         setPendingHandle(handle);
       }
       setShowFileModal(true);
@@ -138,19 +140,19 @@ function App() {
           setShowFileModal(false);
         }
       } else {
-        // First time — pick location for loop-data.json
-        const handle = await window.showSaveFilePicker({
-          suggestedName: 'loop-data.json',
+        // First time — open existing loop-data.json with read+write access
+        const [handle] = await window.showOpenFilePicker({
           types: [{ description: 'Loop Data', accept: { 'application/json': ['.json'] } }],
+          mode: 'readwrite',
         });
-        await S.writeLoopFile(handle, { requests, people, groups });
-        lastWritten.current = JSON.stringify({ requests, people, groups });
+        await applyFileData(handle);
         await S.storeHandle(handle);
-        setFileHandle(handle);
         setShowFileModal(false);
       }
     } catch (e) {
-      if (e.name !== 'AbortError') console.warn('Loop storage error:', e);
+      if (e.name === 'AbortError') return;
+      console.warn('Loop storage error:', e);
+      setShowFileModal(false);
     }
   };
 
@@ -227,10 +229,32 @@ function App() {
             req.status === 'done' ? 'requested' :
             null;
           if (!newStatus) return rs;
-          const actText = newStatus === 'done' ? 'Marked as done' : 'Marked as requested';
-          return rs.map(r => r.id === targetId
-            ? { ...r, status: newStatus, activity: [...r.activity, { who: 'me', when: 'just now', text: actText }] }
+          if (newStatus !== 'done' || !req.recurrence?.type || req.recurrence.type === 'custom') {
+            const actText = newStatus === 'done' ? 'Marked as done' : 'Marked as requested';
+            return rs.map(r => r.id === targetId
+              ? { ...r, status: newStatus, doneAt: newStatus === 'done' ? new Date().toISOString().slice(0, 10) : r.doneAt, activity: [...r.activity, { who: 'me', when: 'just now', text: actText }] }
+              : r);
+          }
+          // Done + recurring: mark done and create next instance
+          const today = new Date().toISOString().slice(0, 10);
+          const updated = rs.map(r => r.id === targetId
+            ? { ...r, status: 'done', doneAt: today, activity: [...r.activity, { who: 'me', when: 'just now', text: 'Marked as done' }] }
             : r);
+          const seriesId = req.recurringSeriesId || ('series-' + Date.now());
+          const withSeries = req.recurringSeriesId ? updated
+            : updated.map(r => r.id === targetId ? { ...r, recurringSeriesId: seriesId } : r);
+          const nextReq = {
+            id: 'REQ-' + String(Date.now()).slice(-6),
+            title: req.title, desc: req.desc,
+            direction: req.direction, from: req.from, to: req.to,
+            priority: req.priority, recurrence: req.recurrence,
+            recurringSeriesId: seriesId,
+            due: computeNextDue(req.due, req.recurrence.type),
+            status: defaultStatusFor(req.direction),
+            doneAt: null, created: today,
+            activity: [{ who: 'me', when: 'just now', text: 'Auto-created from recurring request' }],
+          };
+          return [nextReq, ...withSeries];
         });
         setTimeout(() => {
           const el = document.elementFromPoint(mousePos.current.x, mousePos.current.y);
@@ -289,7 +313,43 @@ function App() {
   const openReq = requests.find(r => r.id === openId);
   const editReq = requests.find(r => r.id === editId);
 
-  const updateReq = (id, fn) => setRequests(rs => rs.map(r => r.id === id ? fn(r) : r));
+  const updateReq = (id, fn) => setRequests(rs => rs.map(r => {
+    if (r.id !== id) return r;
+    const updated = fn(r);
+    if (updated.status === 'done' && r.status !== 'done') updated.doneAt = new Date().toISOString().slice(0, 10);
+    if (updated.status !== 'done' && r.status === 'done') updated.doneAt = null;
+    return updated;
+  }));
+
+  const handleStatusChange = (id, newStatus) => {
+    if (newStatus !== 'done') {
+      updateReq(id, r => ({ ...r, status: newStatus }));
+      return;
+    }
+    setRequests(rs => {
+      const req = rs.find(r => r.id === id);
+      if (!req) return rs;
+      const today = new Date().toISOString().slice(0, 10);
+      const updated = rs.map(r => r.id === id ? { ...r, status: 'done', doneAt: today } : r);
+      if (!req.recurrence || !req.recurrence.type || req.recurrence.type === 'custom') return updated;
+      const seriesId = req.recurringSeriesId || ('series-' + Date.now());
+      const withSeries = req.recurringSeriesId ? updated
+        : updated.map(r => r.id === id ? { ...r, recurringSeriesId: seriesId } : r);
+      const nextReq = {
+        id: 'REQ-' + String(Date.now()).slice(-6),
+        title: req.title, desc: req.desc,
+        direction: req.direction, from: req.from, to: req.to,
+        priority: req.priority, recurrence: req.recurrence,
+        recurringSeriesId: seriesId,
+        due: computeNextDue(req.due, req.recurrence.type),
+        status: defaultStatusFor(req.direction),
+        doneAt: null,
+        created: today,
+        activity: [{ who: 'me', when: 'just now', text: 'Auto-created from recurring request' }],
+      };
+      return [nextReq, ...withSeries];
+    });
+  };
 
   const toggleSelect = (id) => setSelected(s => {
     const next = new Set(s);
@@ -354,7 +414,6 @@ function App() {
     }
     setRequests(rs => [req, ...rs]);
     setNewModal(null);
-    setTimeout(() => setOpenId(req.id), 50);
   };
 
   const onQuickAdd = (req) => {
@@ -416,7 +475,7 @@ function App() {
           <div className="crumb">
             {viewTitle}
             {view !== 'quick' && view !== 'deleted' && view !== 'broadcasts' && (
-              <span className="sub">{filtered.length} / {requests.filter(r => !r.deleted).length}</span>
+              <span className="sub">{filtered.length} / {requests.filter(r => !r.deleted && r.status !== 'done').length}</span>
             )}
           </div>
 
@@ -556,7 +615,8 @@ function App() {
         <Drawer req={openReq}
                 onClose={() => setOpenId(null)}
                 onEdit={setEditId}
-                onUpdate={updateReq} />
+                onUpdate={updateReq}
+                onStatusChange={handleStatusChange} />
       )}
 
       {newModal && (
@@ -615,7 +675,7 @@ function App() {
               <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55 }}>
                 {pendingHandle
                   ? <>Allow Loop to access <strong>loop-data.json</strong> to load and save your data.</>
-                  : <>Allow Loop to save your data to <strong>loop-data.json</strong> in this folder.</>}
+                  : <>Select <strong>loop-data.json</strong> from your Requests folder to load and save your data.</>}}
               </p>
             </div>
             <div className="modal-foot" style={{ justifyContent: 'flex-end' }}>

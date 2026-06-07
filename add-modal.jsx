@@ -13,6 +13,7 @@ function AddModal({ allPeople, onAddPerson, onAddGroup, onClose }) {
   const [tab, setTab] = React.useState('person');
   const [name, setName] = React.useState('');
   const [members, setMembers] = React.useState(new Set());
+  const [memberSearch, setMemberSearch] = React.useState('');
 
   React.useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose(); };
@@ -20,7 +21,7 @@ function AddModal({ allPeople, onAddPerson, onAddGroup, onClose }) {
     return () => window.removeEventListener('keydown', h);
   }, [onClose]);
 
-  const nonMe = allPeople.filter(p => !p.isMe);
+  const nonMe = allPeople.filter(p => !p.isMe).sort((a, b) => a.name.localeCompare(b.name));
   const usedColors = nonMe.map(p => p.color);
   const color = pickColor(usedColors);
   const initials = name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -83,14 +84,22 @@ function AddModal({ allPeople, onAddPerson, onAddGroup, onClose }) {
           {tab === 'group' && (
             <div className="field">
               <label>Members</label>
+              <div className="search" style={{ marginBottom: 4 }}>
+                <IconSearch size={13} style={{ color: 'var(--ink-3)', flexShrink: 0 }} />
+                <input type="text" value={memberSearch}
+                       onChange={e => setMemberSearch(e.target.value)}
+                       placeholder="Search people…" />
+              </div>
               <div className="member-list">
-                {nonMe.map(p => (
-                  <label key={p.id} className="member-row">
-                    <input type="checkbox" checked={members.has(p.id)} onChange={() => toggleMember(p.id)} />
-                    <Avatar person={p} />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
+                {nonMe
+                  .filter(p => !memberSearch.trim() || p.name.toLowerCase().includes(memberSearch.toLowerCase()))
+                  .map(p => (
+                    <label key={p.id} className="member-row">
+                      <input type="checkbox" checked={members.has(p.id)} onChange={() => toggleMember(p.id)} />
+                      <Avatar person={p} />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
               </div>
             </div>
           )}

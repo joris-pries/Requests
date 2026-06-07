@@ -30,6 +30,7 @@ function Card({ req, selected, onOpen, onToggleSelect, isChecked, onHover }) {
   return (
     <div className={"card" + (selected ? " selected" : "") + (isChecked ? " checked" : "")}
          data-req-id={req.id}
+         data-priority={req.priority}
          onMouseEnter={() => onHover && onHover(req.id)}
          onMouseLeave={() => onHover && onHover(null)}
          onClick={(e) => {
@@ -109,16 +110,63 @@ function Column({ status, requests, openId, onOpen, selected, onToggleSelect, on
   );
 }
 
+function DoneBoard({ requests, openId, onOpen, selected, onToggleSelect, onHover }) {
+  const monthKey = (r) => {
+    const d = r.doneAt || r.created;
+    if (!d) return 'Unknown';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  };
+
+  const monthOrder = (key) => {
+    if (key === 'Unknown') return 0;
+    return new Date(key).getTime();
+  };
+
+  const grouped = React.useMemo(() => {
+    const map = new Map();
+    requests.forEach(r => {
+      const k = monthKey(r);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(r);
+    });
+    return [...map.entries()].sort((a, b) => monthOrder(b[0]) - monthOrder(a[0]));
+  }, [requests]);
+
+  return (
+    <div className="done-board">
+      {grouped.map(([month, reqs]) => (
+        <div key={month} className="done-month-group">
+          <div className="done-month-label">{month}</div>
+          <div className="done-month-cards">
+            {reqs.map(r => (
+              <Card key={r.id} req={r}
+                    selected={openId === r.id}
+                    isChecked={selected.has(r.id)}
+                    onOpen={onOpen}
+                    onToggleSelect={onToggleSelect}
+                    onHover={onHover} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Board({ requests, layout, openId, onOpen, selected, onToggleSelect, onHover, view }) {
   const colOf = (r) => effectiveStatus(r);
   const byCol = (dir) => (s) => requests
     .filter(r => colOf(r) === s.id && (dir == null || r.direction === dir));
 
-  const visibleStatuses = view === 'done'
-    ? STATUSES.filter(s => s.id === 'done')
-    : view === 'overdue'
-      ? STATUSES.filter(s => s.id === 'overdue')
-      : STATUSES.filter(s => s.id !== 'done');
+  if (view === 'done') {
+    return <DoneBoard requests={requests} openId={openId} onOpen={onOpen}
+                      selected={selected} onToggleSelect={onToggleSelect} onHover={onHover} />;
+  }
+
+  const visibleStatuses = view === 'overdue'
+    ? STATUSES.filter(s => s.id === 'overdue')
+    : STATUSES.filter(s => s.id !== 'done');
   const gridStyle = { gridTemplateColumns: `repeat(${visibleStatuses.length}, minmax(260px, 1fr))` };
 
   if (layout === 'split') {

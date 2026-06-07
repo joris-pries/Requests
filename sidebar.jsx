@@ -151,7 +151,11 @@ function Sidebar({ requests, allPeople, groups, view, setView, peopleFilter, set
   const entities = [
     ...groups.map(g => ({ ...g, _type: 'group' })),
     ...nonMe.map(p => ({ ...p, _type: 'person' })),
-  ];
+  ].sort((a, b) => {
+    const ca = a._type === 'group' ? (perGroup[a.id] || 0) : (perPerson[a.id] || 0);
+    const cb = b._type === 'group' ? (perGroup[b.id] || 0) : (perPerson[b.id] || 0);
+    return cb - ca;
+  });
 
   return (
     <aside className="sidebar">

@@ -224,30 +224,39 @@ function QuickAdd({ requests, groups, onAdd, onOpen, onHover }) {
 
               {openReqs.length > 0 && (
                 <div className="qa-req-list">
-                  {openReqs.map(r => (
-                    <button key={r.id} className="qa-req-item"
-                            data-req-id={r.id}
-                            onMouseEnter={() => onHover && onHover(r.id)}
-                            onMouseLeave={() => onHover && onHover(null)}
-                            onClick={() => onOpen && onOpen(r.id)}
-                            style={(() => {
-                              const eff = effectiveStatus(r);
-                              const sent = r.direction === 'sent';
-                              const borderColor = eff === 'overdue' ? 'var(--warn)'
-                                : sent ? 'var(--sent)' : 'var(--received)';
-                              const bg = eff === 'overdue' ? 'var(--warn-soft)'
-                                : eff === 'not_requested' ? 'var(--bg-elev)'
-                                : sent ? 'var(--sent-soft)' : 'var(--received-soft)';
-                              return { borderLeft: `2.5px solid ${borderColor}`, background: bg };
-                            })()}>
-                      <span className={'qa-dir-arrow ' + r.direction}>
-                        {r.direction === 'sent'
-                          ? <IconArrowUR size={10} />
-                          : <IconArrowDL size={10} />}
-                      </span>
-                      <span className="qa-req-title">{r.title}</span>
-                    </button>
-                  ))}
+                  {openReqs.map(r => {
+                    const otherId = r.direction === 'sent' ? r.to : r.from;
+                    const otherPerson = isGroup
+                      ? (window.ALL_PEOPLE || PEOPLE).find(p => p.id === otherId)
+                      : null;
+                    return (
+                      <button key={r.id} className="qa-req-item"
+                              data-req-id={r.id}
+                              onMouseEnter={() => onHover && onHover(r.id)}
+                              onMouseLeave={() => onHover && onHover(null)}
+                              onClick={() => onOpen && onOpen(r.id)}
+                              style={(() => {
+                                const eff = effectiveStatus(r);
+                                const sent = r.direction === 'sent';
+                                const bg = eff === 'overdue' ? 'var(--warn-soft)'
+                                  : eff === 'not_requested' ? 'var(--bg-elev)'
+                                  : sent ? 'var(--sent-soft)' : 'var(--received-soft)';
+                                return { background: bg };
+                              })()}>
+                        <span className={'qa-dir-arrow ' + r.direction}>
+                          {r.direction === 'sent'
+                            ? <IconArrowUR size={10} />
+                            : <IconArrowDL size={10} />}
+                        </span>
+                        <span className="qa-req-body">
+                          {otherPerson && (
+                            <span className="qa-req-name">{otherPerson.name}</span>
+                          )}
+                          <span className="qa-req-title">{r.title}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

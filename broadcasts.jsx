@@ -39,7 +39,7 @@ function BroadcastsView({ requests, groups: allGroups, peopleFilter, onOpen, onH
         const first = reqs[0];
 
         return (
-          <div key={first.groupRequestId} className="broadcast-card">
+          <div key={first.groupRequestId} className="broadcast-card" data-priority={first.priority}>
             <div className="broadcast-head">
               <span className={'qa-dir-arrow ' + first.direction} style={{ marginTop: 2 }}>
                 {first.direction === 'sent' ? <IconArrowUR size={12} /> : <IconArrowDL size={12} />}

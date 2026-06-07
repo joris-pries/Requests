@@ -1,6 +1,6 @@
 // Request detail drawer
 
-function Drawer({ req, onClose, onEdit, onUpdate }) {
+function Drawer({ req, onClose, onEdit, onUpdate, onStatusChange }) {
   const [comment, setComment] = React.useState('');
   if (!req) return null;
   const from = personById(req.from);
@@ -45,7 +45,9 @@ function Drawer({ req, onClose, onEdit, onUpdate }) {
         </div>
 
         <div className="drawer-body">
-          <h2>{req.title}</h2>
+          <input className="drawer-title-input"
+                 value={req.title}
+                 onChange={(e) => onUpdate(req.id, (r) => ({ ...r, title: e.target.value }))} />
           <div style={{ fontSize: 12.5, color: 'var(--ink-3)' }} className="mono">
             opened {new Date(req.created).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
           </div>
@@ -54,7 +56,9 @@ function Drawer({ req, onClose, onEdit, onUpdate }) {
             <div className="k">Status</div>
             <div className="v">
               <select value={req.status}
-                      onChange={(e) => onUpdate(req.id, (r) => ({ ...r, status: e.target.value }))}
+                      onChange={(e) => onStatusChange
+                        ? onStatusChange(req.id, e.target.value)
+                        : onUpdate(req.id, (r) => ({ ...r, status: e.target.value }))}
                       style={{
                         border: '1px solid var(--line)',
                         background: 'var(--bg-elev)',
@@ -81,34 +85,92 @@ function Drawer({ req, onClose, onEdit, onUpdate }) {
 
             <div className="k">Due</div>
             <div className="v">
-              <span className="mono"
-                    style={{ fontSize: 12.5, color: due.tone === 'overdue' ? 'var(--warn)' : 'var(--ink)' }}>
-                {req.due ? new Date(req.due).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' }) : '—'}
-              </span>
+              <input type="date" value={req.due || ''}
+                     onChange={(e) => onUpdate(req.id, (r) => ({ ...r, due: e.target.value || null }))}
+                     style={{
+                       border: '1px solid var(--line)',
+                       background: 'var(--bg-elev)',
+                       padding: '4px 8px',
+                       borderRadius: 7,
+                       fontSize: 12.5,
+                       fontFamily: 'inherit',
+                       color: due.tone === 'overdue' ? 'var(--warn)' : 'var(--ink)',
+                     }} />
               {due.tone && (
                 <span className="mono" style={{ fontSize: 11, color: due.tone === 'overdue' ? 'var(--warn)' : 'var(--accent-ink)' }}>
-                  · {due.label}
+                  {due.label}
                 </span>
               )}
             </div>
 
             <div className="k">Priority</div>
             <div className="v">
-              <span className="status-pill">
-                <span className="dot" style={{
-                  background: req.priority === 'high' ? 'var(--warn)' : req.priority === 'med' ? 'var(--accent)' : 'var(--ink-3)',
-                }} />
-                {req.priority === 'high' ? 'High' : req.priority === 'med' ? 'Medium' : 'Low'}
-              </span>
+              <select value={req.priority}
+                      onChange={(e) => onUpdate(req.id, (r) => ({ ...r, priority: e.target.value }))}
+                      style={{
+                        border: '1px solid var(--line)',
+                        background: 'var(--bg-elev)',
+                        padding: '4px 8px',
+                        borderRadius: 7,
+                        fontSize: 12.5,
+                        fontFamily: 'inherit',
+                      }}>
+                <option value="high">High</option>
+                <option value="med">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div className="k">Repeats</div>
+            <div className="v" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+              <select value={req.recurrence?.type ?? ''}
+                      onChange={(e) => {
+                        const type = e.target.value || null;
+                        onUpdate(req.id, r => ({
+                          ...r,
+                          recurrence: type === null ? null
+                            : type === 'custom' ? { type: 'custom', text: r.recurrence?.text ?? '' }
+                            : { type },
+                        }));
+                      }}
+                      style={{
+                        border: '1px solid var(--line)',
+                        background: 'var(--bg-elev)',
+                        padding: '4px 8px',
+                        borderRadius: 7,
+                        fontSize: 12.5,
+                        fontFamily: 'inherit',
+                      }}>
+                {RECURRENCE_OPTIONS.map(o => (
+                  <option key={String(o.type)} value={o.type ?? ''}>{o.label}</option>
+                ))}
+              </select>
+              {req.recurrence?.type === 'custom' && (
+                <input type="text"
+                       value={req.recurrence.text ?? ''}
+                       placeholder="e.g. first Monday of month"
+                       onChange={(e) => onUpdate(req.id, r => ({
+                         ...r,
+                         recurrence: { type: 'custom', text: e.target.value },
+                       }))}
+                       style={{
+                         border: '1px solid var(--line)',
+                         background: 'var(--bg-elev)',
+                         padding: '4px 8px',
+                         borderRadius: 7,
+                         fontSize: 12.5,
+                         fontFamily: 'inherit',
+                         width: '100%',
+                       }} />
+              )}
             </div>
           </div>
 
-          {req.desc && (
-            <React.Fragment>
-              <div className="nav-label" style={{ padding: 0, marginBottom: 8 }}>Description</div>
-              <div className="desc-block">{req.desc}</div>
-            </React.Fragment>
-          )}
+          <div className="nav-label" style={{ padding: 0, marginBottom: 8 }}>Description</div>
+          <textarea className="drawer-desc-input"
+                    placeholder="Add a description…"
+                    value={req.desc || ''}
+                    onChange={(e) => onUpdate(req.id, (r) => ({ ...r, desc: e.target.value }))} />
 
           <div className="activity">
             <h3>Activity</h3>
@@ -145,22 +207,7 @@ function Drawer({ req, onClose, onEdit, onUpdate }) {
         </div>
 
         <div className="drawer-foot">
-          {req.status !== 'done' ? (
-            <button className="btn"
-                    onClick={() => onUpdate(req.id, (r) => ({
-                      ...r, status: 'done',
-                      activity: [...r.activity, { who: 'me', when: 'just now', text: 'Marked as done' }],
-                    }))}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <IconCheck size={13} /> Mark done
-              </span>
-            </button>
-          ) : (
-            <button className="btn secondary"
-                    onClick={() => onUpdate(req.id, (r) => ({ ...r, status: defaultStatusFor(r.direction) }))}>
-              Reopen
-            </button>
-          )}
+          <button className="btn secondary" onClick={onClose}>Close</button>
           <div style={{ flex: 1 }} />
           <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
             {req.activity.length} updates

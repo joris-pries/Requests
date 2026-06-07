@@ -185,8 +185,15 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
     if (initial?._prefillPerson) return [initial._prefillPerson];
     return [];
   });
-  const [due, setDue]       = React.useState(existing?.due || '');
-  const [priority, setPri]  = React.useState(existing?.priority || 'med');
+  const [due, setDue]           = React.useState(existing?.due || initial?.due || '');
+  const [priority, setPri]      = React.useState(existing?.priority || initial?.priority || 'med');
+  const [recurrenceType, setRecurrenceType] = React.useState(
+    existing?.recurrence?.type ?? initial?.recurrence?.type ?? null
+  );
+  const [recurrenceCustom, setRecurrenceCustom] = React.useState(
+    existing?.recurrence?.text ?? initial?.recurrence?.text ?? ''
+  );
+  const recurringSeriesId = existing?.recurringSeriesId ?? initial?._recurringSeriesId ?? null;
   const initDir = existing?.direction || initial?.direction || 'sent';
   const [status, setStatus] = React.useState(
     existing?.status || initial?.status || defaultStatusFor(initDir)
@@ -209,12 +216,16 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
 
   const submit = () => {
     if (!canSubmit) return;
+    const recurrence = recurrenceType === null ? null
+      : recurrenceType === 'custom' ? { type: 'custom', text: recurrenceCustom.trim() }
+      : { type: recurrenceType };
 
     if (isGroupCounter) {
       onSubmit({
         _groupId: counter[0],
         title: title.trim(), desc: desc.trim(),
         direction, status, priority, due: due || null,
+        recurrence, recurringSeriesId,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -226,6 +237,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         _memberIds: counter,
         title: title.trim(), desc: desc.trim(),
         direction, status, priority, due: due || null,
+        recurrence, recurringSeriesId,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -241,6 +253,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         ...existing,
         title: title.trim(), desc: desc.trim(),
         direction, from, to, status, priority, due: due || null,
+        recurrence,
         activity: [...existing.activity, { who: 'me', when: 'just now', text: 'Edited this request' }],
       });
     } else {
@@ -248,6 +261,7 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
         id: 'REQ-' + (105 + Math.floor(Math.random() * 900)),
         title: title.trim(), desc: desc.trim(),
         direction, from, to, status, priority, due: due || null,
+        recurrence, recurringSeriesId,
         created: new Date().toISOString().slice(0, 10),
         activity: [{ who: 'me', when: 'just now', text: 'Created this request' }],
       });
@@ -330,6 +344,25 @@ function NewRequestModal({ initial, existing, onClose, onSubmit }) {
                 <option value="high">High</option>
               </select>
             </div>
+          </div>
+
+          <div className="row2">
+            <div className="field">
+              <label>Repeats</label>
+              <select value={recurrenceType ?? ''} onChange={(e) => setRecurrenceType(e.target.value || null)}>
+                {RECURRENCE_OPTIONS.map(o => (
+                  <option key={String(o.type)} value={o.type ?? ''}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            {recurrenceType === 'custom' && (
+              <div className="field">
+                <label>Custom cadence</label>
+                <input type="text" value={recurrenceCustom}
+                       placeholder="e.g. first Monday of month"
+                       onChange={(e) => setRecurrenceCustom(e.target.value)} />
+              </div>
+            )}
           </div>
         </div>
 

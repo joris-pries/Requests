@@ -1,0 +1,13 @@
+{
+  "requests": [],
+  "people": [
+    {
+      "id": "me",
+      "name": "You",
+      "initials": "YO",
+      "color": "#1f1d18",
+      "isMe": true
+    }
+  ],
+  "groups": []
+}

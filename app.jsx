@@ -193,7 +193,15 @@ function App() {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
       if (e.key === 'h' || e.key === 'H') { e.preventDefault(); setShowHelp(h => !h); }
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setNewModal({}); }
-      if (e.key === 'm' || e.key === 'M') { e.preventDefault(); setNewModal(peopleFilter ? { _prefillPerson: peopleFilter } : {}); }
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        if (selected.size > 0 && peopleFilter && people.some(p => p.id === peopleFilter)) {
+          bulkAssign(peopleFilter);
+          setSelected(new Set());
+        } else {
+          setNewModal(peopleFilter ? { _prefillPerson: peopleFilter } : {});
+        }
+      }
       if (e.key === 'p' || e.key === 'P') { e.preventDefault(); setShowPeoplePicker(true); }
       if (e.key === 't' || e.key === 'T') { e.preventDefault(); setShowTagPicker(true); }
       if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); setView('quick'); }
@@ -268,7 +276,7 @@ function App() {
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [openId, hoveredId]);
+  }, [openId, hoveredId, selected, peopleFilter, people]);
 
   const deletedRequests = React.useMemo(() => requests.filter(r => r.deleted), [requests]);
 

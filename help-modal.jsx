@@ -2,7 +2,7 @@
 
 const SHORTCUTS = [
   { keys: ['N'],     desc: 'New request' },
-  { keys: ['M'],     desc: 'New request for current person / group' },
+  { keys: ['M'],     desc: 'Assign selected to current person · new request for current person' },
   { keys: ['P'],     desc: 'Jump to person or group' },
   { keys: ['T'],     desc: 'Jump to tag' },
   { keys: ['Q'],     desc: 'Quick add' },
